@@ -11,7 +11,26 @@ import io
 import uuid
 import os
 
-app = FastAPI()
+app = FastAPI(
+    title="Scoliosis Detection Tool",
+    description="""The Posture and Scoliosis Tool is a FastAPI application that evaluates a patient's 
+    risk for posture-related issues and scoliosis based on both a structured questionnaire and a side-view 
+    image. It processes survey inputs covering demographics, symptoms, lifestyle, and physical indicators, 
+    and analyzes an uploaded image using Mediapipe to identify body landmarks and calculate the hip angle. 
+    Based on this information, it assigns a risk score (Low, Moderate, or High) and returns an annotated 
+    version of the image with pose tracings. The app is suitable for use in health screening workflows, 
+    telehealth platforms, or wellness assessments.""",
+    version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/processed_images", StaticFiles(directory="processed_images"), name="processed_images")
 
 class AssessmentOutput(BaseModel):
