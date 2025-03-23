@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
+from fastapi.middleware.cors import CORSMiddleware  # <- ADD THIS LINE
 from typing import Annotated, Literal
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
