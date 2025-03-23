@@ -1,8 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, Request
-from fastapi.middleware.cors import CORSMiddleware  # <- ADD THIS LINE
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from typing import Annotated, Literal
-from fastapi.responses import PlainTextResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from PIL import Image
 import numpy as np
@@ -47,11 +46,11 @@ def assess_posture(
     gender: Annotated[Literal["Male", "Female", "Prefer not to say", "Other"], Form(description="What is the patient's gender?")] = "Prefer not to say",
     occupation: Annotated[Literal["Student", "Office Worker", "Manual Labor", "Other"], Form(description="What is the patient's primary occupation?")] = "Other",
     pain_present: Annotated[Literal["Yes", "No"], Form(description="Does the patient experience any pain in their back or neck?")] = "No",
-    pain_location: Annotated[Literal["Upper Back", "Lower Back", "Neck", "Shoulders", "Other"], Form(description="Where does the patient primarily feel the pain?")] = "",
+    pain_location: Annotated[Literal["Upper Back", "Lower Back", "Neck", "Shoulders", "Other"], Form(description="Where does the patient primarily feel the pain?")] = "Upper Back",
     pain_severity: Annotated[Literal["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], Form(description="On a scale of 1 to 10, how would the patient rate their pain?")] = "0",
-    pain_duration: Annotated[Literal["Less than a month", "1-6 months", "6 months to a year", "Over a year"], Form(description="How long has the patient been experiencing this pain?")] = "",
-    symptom_onset: Annotated[Literal["Gradually", "Suddenly"], Form(description="Did the patient's pain start gradually or suddenly?")] = "",
-    activity_related_pain: Annotated[Literal["Yes", "No"], Form(description="Does physical activity worsen the patient's pain?")] = "",
+    pain_duration: Annotated[Literal["Less than a month", "1-6 months", "6 months to a year", "Over a year"], Form(description="How long has the patient been experiencing this pain?")] = "Less than a month",
+    symptom_onset: Annotated[Literal["Gradually", "Suddenly"], Form(description="Did the patient's pain start gradually or suddenly?")] = "Gradually",
+    activity_related_pain: Annotated[Literal["Yes", "No"], Form(description="Does physical activity worsen the patient's pain?")] = "No",
     previous_diagnosis: Annotated[Literal["Yes", "No"], Form(description="Has the patient been previously diagnosed with scoliosis or any other spinal condition?")] = "No",
     family_history: Annotated[Literal["Yes", "No"], Form(description="Is there a family history of scoliosis or spinal issues for the patient?")] = "No",
     past_injuries: Annotated[Literal["Yes", "No"], Form(description="Has the patient had any back or spinal injuries in the past?")] = "No",
@@ -74,10 +73,8 @@ def assess_posture(
 ):
     score = 0
     hip_angle = None
-    image_id = f"{uuid.uuid4()}.png"
-    image_path = os.path.join("processed_images", image_id)
-
-    os.makedirs("processed_images", exist_ok=True)
+    image_id = f"{uuid.uuid4().hex}"
+    image_path = os.path.join("processed_images", f"{image_id}.png")
 
     img_bytes = image.file.read()
     pil_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
@@ -95,9 +92,7 @@ def assess_posture(
                 annotated_image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS
             )
 
-            def get_coords(lm):
-                return [lm.x, lm.y]
-
+            def get_coords(lm): return [lm.x, lm.y]
             shoulder = get_coords(landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER])
             hip = get_coords(landmarks[mp_pose.PoseLandmark.LEFT_HIP])
             knee = get_coords(landmarks[mp_pose.PoseLandmark.LEFT_KNEE])
@@ -109,73 +104,50 @@ def assess_posture(
                 return 360 - angle if angle > 180 else angle
 
             hip_angle = calc_angle(shoulder, hip, knee)
-
             if hip_angle < 165:
                 score += 2
 
+    # Score logic
     if pain_present == "Yes":
         score += 2
-        if int(pain_severity) >= 7:
-            score += 2
-        elif int(pain_severity) >= 4:
-            score += 1
-        if pain_duration in ["6 months to a year", "Over a year"]:
-            score += 2
-        if symptom_onset == "Suddenly":
-            score += 1
-        if activity_related_pain == "Yes":
-            score += 1
-
-    if previous_diagnosis == "Yes":
-        score += 3
-    if family_history == "Yes":
-        score += 2
-    if past_injuries == "Yes":
-        score += 1
-    if physical_activity_level in ["Sedentary", "Lightly active"]:
-        score += 1
-    if int(screen_time) > 6:
-        score += 1
-    if int(posture_awareness) < 5:
-        score += 1
-    if ergonomic_setup == "No":
-        score += 1
-    if sleeping_position == "Stomach":
-        score += 1
-    if shoulder_alignment == "Yes":
-        score += 2
-    if head_alignment == "Yes":
-        score += 2
-    if spinal_curvature == "Yes":
-        score += 3
-    if hip_level == "No":
-        score += 2
-    if foot_alignment != "Straight":
-        score += 1
-    if clothes_fit == "Yes":
-        score += 1
-    if mobility == "Yes":
-        score += 2
-    if fatigue == "Yes":
-        score += 1
-    if breathing == "Yes":
-        score += 1
-    if balance_issues == "Yes":
-        score += 1
+        if int(pain_severity) >= 7: score += 2
+        elif int(pain_severity) >= 4: score += 1
+        if pain_duration in ["6 months to a year", "Over a year"]: score += 2
+        if symptom_onset == "Suddenly": score += 1
+        if activity_related_pain == "Yes": score += 1
+    if previous_diagnosis == "Yes": score += 3
+    if family_history == "Yes": score += 2
+    if past_injuries == "Yes": score += 1
+    if physical_activity_level in ["Sedentary", "Lightly active"]: score += 1
+    if int(screen_time) > 6: score += 1
+    if int(posture_awareness) < 5: score += 1
+    if ergonomic_setup == "No": score += 1
+    if sleeping_position == "Stomach": score += 1
+    if shoulder_alignment == "Yes": score += 2
+    if head_alignment == "Yes": score += 2
+    if spinal_curvature == "Yes": score += 3
+    if hip_level == "No": score += 2
+    if foot_alignment != "Straight": score += 1
+    if clothes_fit == "Yes": score += 1
+    if mobility == "Yes": score += 2
+    if fatigue == "Yes": score += 1
+    if breathing == "Yes": score += 1
+    if balance_issues == "Yes": score += 1
 
     risk = "Low"
-    if score >= 15:
-        risk = "High"
-    elif score >= 8:
-        risk = "Moderate"
+    if score >= 15: risk = "High"
+    elif score >= 8: risk = "Moderate"
 
-    # Save annotated image
     Image.fromarray(annotated_image).save(image_path)
 
-    base_url = str(request.base_url)
+    base_url = request.base_url
     return AssessmentOutput(
         risk_level=risk,
         score=score,
         hip_angle=hip_angle,
-        processed_image_link=f"{base_url}processed_images/{image_id}"
+        processed_image_link=f"{base_url}download_processed_image/{image_id}"
     )
+
+@app.get("/download_processed_image/{image_id}", summary="Download Processed Image")
+async def download_processed_image(image_id: str):
+    return FileResponse(f"processed_images/{image_id}.png", media_type="image/png", filename="posture_analysis.png")
