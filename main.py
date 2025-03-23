@@ -32,8 +32,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/processed_images", StaticFiles(directory="processed_images"), name="processed_images")
-
 class AssessmentOutput(BaseModel):
     risk_level: str
     score: int
