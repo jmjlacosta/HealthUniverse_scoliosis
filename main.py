@@ -40,9 +40,9 @@ class AssessmentOutput(BaseModel):
 @app.post("/assess", response_model=AssessmentOutput)
 def assess_posture(
     request: Request,
-    age: Annotated[str, Form(description="What is the patient's age?")] = "20",
-    height: Annotated[str, Form(description="What is the patient's height? (cm)")] = "170",
-    weight: Annotated[str, Form(description="What is the patient's weight? (kg)")] = "70",
+    age: Annotated[int, Form(description="What is the patient's age?")] = 20,
+    height: Annotated[int, Form(description="What is the patient's height? (cm)")] = 170,
+    weight: Annotated[int, Form(description="What is the patient's weight? (kg)")] = 70,
     gender: Annotated[Literal["Male", "Female", "Prefer not to say", "Other"], Form(description="What is the patient's gender?")] = "Prefer not to say",
     occupation: Annotated[Literal["Student", "Office Worker", "Manual Labor", "Other"], Form(description="What is the patient's primary occupation?")] = "Other",
     pain_present: Annotated[Literal["Yes", "No"], Form(description="Does the patient experience any pain in their back or neck?")] = "No",
@@ -55,7 +55,7 @@ def assess_posture(
     family_history: Annotated[Literal["Yes", "No"], Form(description="Is there a family history of scoliosis or spinal issues for the patient?")] = "No",
     past_injuries: Annotated[Literal["Yes", "No"], Form(description="Has the patient had any back or spinal injuries in the past?")] = "No",
     physical_activity_level: Annotated[Literal["Sedentary", "Lightly active", "Moderately active", "Very active"], Form(description="How would you describe the patient's regular physical activity level?")] = "Moderately active",
-    screen_time: Annotated[str, Form(description="How many hours per day does the patient spend sitting or using screens?")] = "6",
+    screen_time: Annotated[int, Form(description="How many hours per day does the patient spend sitting or using screens?")] = 6,
     posture_awareness: Annotated[Literal["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], Form(description="How would you rate the patient's awareness of maintaining good posture? (1 to 10)")] = "5",
     ergonomic_setup: Annotated[Literal["Yes", "No"], Form(description="Does the patient have an ergonomic workspace setup (e.g., chair, desk height)?")] = "Yes",
     sleeping_position: Annotated[Literal["Back", "Side", "Stomach", "Other"], Form(description="What is the patient's usual sleeping position?")] = "Side",
